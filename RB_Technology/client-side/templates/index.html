@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RB_Technology — Virtual Try-On</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f13;
+      color: #e8e8f0;
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2rem 2.5rem;
+      background: #16161e;
+      border-bottom: 1px solid #2a2a3a;
+    }
+    header .brand { display: flex; align-items: center; gap: .8rem; }
+    header .brand-icon { font-size: 2rem; }
+    header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: .04em; }
+    header h1 span { color: #7c6af7; }
+    header .badge {
+      background: linear-gradient(135deg, #7c6af7, #5e9af5);
+      padding: .3rem .9rem;
+      border-radius: 20px;
+      font-size: .8rem;
+      font-weight: 600;
+    }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    .hero h2 { font-size: 2rem; font-weight: 800; margin-bottom: .5rem; }
+    .hero p  { color: #8888aa; font-size: 1rem; }
+
+    .upload-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: #1a1a24;
+      border: 1.5px dashed #3a3a55;
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: border-color .2s;
+    }
+    .card:hover { border-color: #7c6af7; }
+    .card .step-label {
+      font-size: .75rem;
+      letter-spacing: .1em;
+      color: #7c6af7;
+      text-transform: uppercase;
+      margin-bottom: .5rem;
+    }
+    .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; }
+
+    .upload-area {
+      width: 100%;
+      aspect-ratio: 3/4;
+      background: #12121a;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .upload-area input[type=file] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+    .upload-area img {
+      width: 100%; height: 100%; object-fit: cover; border-radius: 12px;
+    }
+    .upload-area .placeholder { color: #555570; font-size: 2.5rem; }
+    .upload-area .placeholder p { font-size: .8rem; margin-top: .4rem; color: #6666888; }
+
+    .status { margin-top: .8rem; font-size: .85rem; color: #6b6b8a; }
+    .status.ready { color: #6cf578; }
+
+    .actions { display: flex; gap: 1rem; justify-content: center; }
+    .btn {
+      padding: .85rem 2.2rem;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn:hover  { opacity: .88; }
+    .btn:active { transform: scale(.97); }
+    .btn-primary {
+      background: linear-gradient(135deg, #7c6af7, #5e9af5);
+      color: #fff;
+      width: 260px;
+    }
+    .btn-secondary {
+      background: #2a2a3a;
+      color: #c0c0d8;
+    }
+
+    .result-section {
+      margin-top: 2.5rem;
+      text-align: center;
+    }
+    .result-section h3 { font-size: 1.3rem; margin-bottom: 1rem; color: #c8c8e8; }
+    .result-section img {
+      max-width: 400px;
+      width: 100%;
+      border-radius: 16px;
+      box-shadow: 0 8px 40px rgba(124, 106, 247, .3);
+    }
+
+    .error-box {
+      background: #2a1020;
+      border: 1px solid #8b2050;
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      color: #f080a0;
+      margin-top: 1.5rem;
+      text-align: center;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: #44445a;
+      font-size: .85rem;
+    }
+
+    @media (max-width: 700px) {
+      .upload-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="brand-icon">👗</span>
+    <h1>RB<span>_Technology</span></h1>
+  </div>
+  <span class="badge">⚡ AI Powered</span>
+</header>
+
+<main>
+  <div class="hero">
+    <h2>Virtual Clothing Try-On</h2>
+    <p>Upload your photo and a clothing item — AI will show you how it looks on you.</p>
+  </div>
+
+  <form action="/preds" method="POST" enctype="multipart/form-data" id="tryonForm">
+    <div class="upload-grid">
+
+      <!-- Person Photo -->
+      <div class="card">
+        <div class="step-label">01 — Your Photo</div>
+        <h3>🤳 Upload Your Photo</h3>
+        <div class="upload-area" id="personArea">
+          <input type="file" name="model" accept="image/*" id="personInput" onchange="previewImage(this, 'personArea', 'personStatus')" />
+          <div class="placeholder" id="personPlaceholder">
+            <div>📷</div>
+            <p>Full-body works best</p>
+          </div>
+        </div>
+        <div class="status" id="personStatus">No photo uploaded</div>
+      </div>
+
+      <!-- Clothing -->
+      <div class="card">
+        <div class="step-label">02 — Clothing Item</div>
+        <h3>👕 Upload Clothing</h3>
+        <div class="upload-area" id="clothArea">
+          <input type="file" name="cloth" accept="image/*" id="clothInput" onchange="previewImage(this, 'clothArea', 'clothStatus')" />
+          <div class="placeholder" id="clothPlaceholder">
+            <div>🛍️</div>
+            <p>T-shirt, dress, jacket…</p>
+          </div>
+        </div>
+        <div class="status" id="clothStatus">No clothing uploaded</div>
+      </div>
+
+      <!-- Generate -->
+      <div class="card">
+        <div class="step-label">03 — Generate</div>
+        <h3>✨ Try It On</h3>
+        <div style="text-align:left; margin-bottom:1.2rem; color:#8888aa; font-size:.9rem; line-height:1.7;">
+          <div>1️⃣ Upload your full-body photo</div>
+          <div>2️⃣ Upload a clothing item</div>
+          <div>3️⃣ Click <strong>Try It On!</strong></div>
+          <br/>
+          <div style="color:#6666aa; font-size:.8rem;">AI generates a photorealistic result using ViTON</div>
+        </div>
+        <div class="actions" style="flex-direction:column; align-items:stretch;">
+          <button type="submit" class="btn btn-primary">✨ Try It On!</button>
+          <button type="button" class="btn btn-secondary" onclick="resetForm()">🔄 Reset</button>
+        </div>
+      </div>
+
+    </div>
+  </form>
+
+  {% if error %}
+  <div class="error-box">⚠️ {{ error }}</div>
+  {% endif %}
+
+  {% if op %}
+  <div class="result-section">
+    <h3>🎉 Your Try-On Result</h3>
+    <img src="data:image/png;base64,{{ op }}" alt="Try-On Result" />
+    <br/><br/>
+    <a href="data:image/png;base64,{{ op }}" download="tryon_result.png">
+      <button class="btn btn-primary" style="width:auto;">⬇️ Download Result</button>
+    </a>
+  </div>
+  {% endif %}
+</main>
+
+<footer>Built with ❤️ by RB_Technology · Powered by ViTON + PyTorch</footer>
+
+<script>
+  function previewImage(input, areaId, statusId) {
+    const area   = document.getElementById(areaId);
+    const status = document.getElementById(statusId);
+    const placeholder = area.querySelector('.placeholder');
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      let img = area.querySelector('img');
+      if (!img) { img = document.createElement('img'); area.appendChild(img); }
+      img.src = e.target.result;
+      if (placeholder) placeholder.style.display = 'none';
+      status.textContent = '✅ Ready';
+      status.className   = 'status ready';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+
+  function resetForm() {
+    document.getElementById('tryonForm').reset();
+    ['personArea', 'clothArea'].forEach(id => {
+      const area = document.getElementById(id);
+      const img  = area.querySelector('img');
+      if (img) img.remove();
+      const ph = area.querySelector('.placeholder');
+      if (ph) ph.style.display = '';
+    });
+    document.getElementById('personStatus').textContent = 'No photo uploaded';
+    document.getElementById('personStatus').className   = 'status';
+    document.getElementById('clothStatus').textContent  = 'No clothing uploaded';
+    document.getElementById('clothStatus').className    = 'status';
+  }
+</script>
+
+</body>
+</html>
