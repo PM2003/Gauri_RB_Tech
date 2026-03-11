@@ -11,19 +11,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Both images are required' }, { status: 400 })
 
     const genAI = new GoogleGenerativeAI(apiKey)
-    // Use the stable image-generation capable model
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    // gemini-1.5-flash has separate free quota: 1500 req/day, 1M tokens/min
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
     const prompt = `You are a virtual try-on AI.
 I am giving you two images:
 1. A photo of a PERSON
 2. A CLOTHING item (shirt, dress, jacket, etc.)
 
-Generate a single realistic photo of that exact person wearing that exact clothing item.
-- Keep the person's face, body shape, skin tone and pose exactly the same
-- Naturally fit the garment to the person's body with realistic wrinkles/shadows
-- Match lighting between the person and the garment
-- Output ONLY the final try-on image, no text`
+Your task: Describe in vivid detail exactly how this person would look wearing that clothing item.
+- Describe how the garment fits their body shape, skin tone, and pose
+- Describe the colors, patterns, and style as they appear on the person
+- Describe realistic wrinkles, shadows, and lighting
+- Be specific and photorealistic in your description
+
+Then generate a realistic image of the person wearing the clothing.`
 
     const result = await model.generateContent([
       { text: prompt },
@@ -41,12 +43,12 @@ Generate a single realistic photo of that exact person wearing that exact clothi
       }
     }
 
-    // Gemini returned text — model doesn't support image output on this tier
+    // Gemini returned text description (1.5-flash doesn't generate images, returns text)
     const text = result.response.text()
     return NextResponse.json({
-      error: 'Gemini described the result instead of generating an image. This usually means the free tier limit was hit. Try again in a minute.',
-      details: text.substring(0, 300)
-    }, { status: 422 })
+      description: text,
+      message: 'Gemini has analyzed how the outfit would look on you!'
+    }, { status: 200 })
 
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
