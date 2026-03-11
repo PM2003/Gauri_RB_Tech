@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Both images are required' }, { status: 400 })
 
     const genAI = new GoogleGenerativeAI(apiKey)
-    // Use the image-generation capable model
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+    // Use the stable image-generation capable model
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
     const prompt = `You are a virtual try-on AI.
 I am giving you two images:
